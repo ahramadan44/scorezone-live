@@ -225,6 +225,53 @@ function scorezone_run_tests()
 }
 add_action('init', 'scorezone_run_tests');
 
+// إضافة شورت كود لعرض المباريات
+function scorezone_display_matches($atts)
+{
+    global $wpdb;
+    $table_matches = $wpdb->prefix . 'scorezone_matches';
+
+    // معايير الفلترة الافتراضية (مثل عرض المباريات الحية)
+    $atts = shortcode_atts(
+        array(
+            'status' => 'live',  // يمكنك تغيير هذا لعرض حالة مختلفة مثل 'finished', 'scheduled'
+            'per_page' => 10,    // عدد المباريات المعروضة
+        ),
+        $atts,
+        'scorezone_matches'
+    );
+
+    // استعلام لاسترجاع المباريات من قاعدة البيانات
+    $query = "SELECT * FROM $table_matches WHERE status = %s ORDER BY match_date DESC LIMIT %d";
+    $matches = $wpdb->get_results($wpdb->prepare($query, $atts['status'], $atts['per_page']));
+
+    // التحقق من وجود نتائج
+    if (empty($matches)) {
+        return '<p>No matches found.</p>';
+    }
+
+    // عرض المباريات في جدول
+    $output = '<table>';
+    $output .= '<thead><tr><th>Home Team</th><th>Away Team</th><th>Score</th><th>Date</th><th>Status</th></tr></thead>';
+    $output .= '<tbody>';
+
+    foreach ($matches as $match) {
+        $output .= '<tr>';
+        $output .= '<td>' . esc_html($match->team_home) . '</td>';
+        $output .= '<td>' . esc_html($match->team_away) . '</td>';
+        $output .= '<td>' . esc_html($match->score_home) . ' - ' . esc_html($match->score_away) . '</td>';
+        $output .= '<td>' . esc_html($match->match_date) . '</td>';
+        $output .= '<td>' . esc_html($match->status) . '</td>';
+        $output .= '</tr>';
+    }
+
+    $output .= '</tbody>';
+    $output .= '</table>';
+
+    return $output;
+}
+add_shortcode('scorezone_matches', 'scorezone_display_matches');
+
 // إضافة REST API endpoint للمباريات
 add_action('rest_api_init', 'scorezone_register_api');
 function scorezone_register_api()
